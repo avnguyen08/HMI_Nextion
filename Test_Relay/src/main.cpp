@@ -18,80 +18,74 @@ long int pot_time = 0;
 int pot_val = 0;
 int pot_old_val = 0;
 int prog_bar = 0;
+bool relay1 = 0;
+bool relay8 = 0;
+
+
+NexButton b0 = NexButton(2, 7, "b0");
+NexButton b1 = NexButton(2, 8, "b1");
+
+NexTouch *nex_listen_list[] = 
+{
+    &b0,
+    &b1,
+    NULL
+};
+
+
+void toggle_relay(int relay_num) {
+  if ( relay_num == 1) {
+    if(relay1==0)
+      {digitalWrite(RELAY_PIN_1, HIGH);}
+    else if(relay1==1)
+      {digitalWrite(RELAY_PIN_1, LOW );}
+    relay1 = !relay1;
+  }
+  else if ( relay_num == 8) {
+    if(relay8==0)
+      {digitalWrite(RELAY_PIN_8, HIGH);}
+    else if(relay8==1)
+      {digitalWrite(RELAY_PIN_8, LOW );}
+    relay8 = !relay8;
+  }
+}
+void b0PopCallback(void *ptr)
+{
+    toggle_relay(1);
+}
+void b1PopCallback(void *ptr)
+{
+    toggle_relay(8);
+}
+
 void setup()
 {
-    Serial.begin(9600); //rx = 22 , tx = 23
-    Serial1.begin(9600, SERIAL_8N1, 22, 23); //rx = 22 , tx = 23
+    Serial.begin(9600); //USB serial
+    Serial1.begin(9600, SERIAL_8N1, 22, 23); // Nextion Device Serial rx = 22 , tx = 23
     delay(10);
     Serial.println("setup");
 
+    nexInit();
+    b0.attachPop(b0PopCallback, &b0); // links my custom pop function to b0 button
+    b1.attachPop(b1PopCallback, &b1); // links my custom pop function to b1 button
+
     pinMode(RELAY_PIN_1, OUTPUT);
-    pinMode(MY_POT, INPUT);
     pinMode(RELAY_PIN_8, OUTPUT);
-    pinMode(LED_PIN, OUTPUT);
     delay(100);
 
     //Turn off all relays
     digitalWrite(RELAY_PIN_1, LOW);
     digitalWrite(RELAY_PIN_8, LOW);
-    digitalWrite(LED_PIN, LOW);
 
 //Turn the relays on and off in turn
     digitalWrite(RELAY_PIN_1, HIGH);
-    digitalWrite(RELAY_PIN_8, HIGH);
     delay(500);
 
     digitalWrite(RELAY_PIN_1, LOW);
-    digitalWrite(RELAY_PIN_8, LOW);
 
 }
 
 void loop()
 {
-  if (Serial1.available() > 0) {
-    start = millis();
-    //read incoming byte
-    my_str += char(Serial1.read());
-
-    //print what was just read
-    Serial.print("I recieved: ");
-    Serial.println(my_str);
-  }
-
-  digitalRead(MY_POT);
-  if(millis() - pot_time > 100) 
-  {
-    if (prog_bar >= 100) {
-      prog_bar = 0;
-    }
-    prog_bar++;
-    Serial1.print("j0.val=");
-    Serial1.print(prog_bar);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-  }
-  //error case where string is above 25 chars
-  if (my_str.length() > 25) {
-    my_str.clear();
-  }
-  // case where data hasn't been sent in 1 second.
-  if (millis() - start > 5000) {
-    my_str.clear();
-  }
-
-
-
-  if (my_str == "Turn off relay 1")
-  {digitalWrite(RELAY_PIN_1, LOW);
-  my_str = "";}
-  else if (my_str == "Turn on relay 1")
-  {digitalWrite(RELAY_PIN_1, HIGH);
-  my_str = "";}
-  else if (my_str == "Turn off relay 8")
-  {digitalWrite(RELAY_PIN_8, LOW);
-  my_str = "";}
-  else if (my_str == "Turn on relay 8")
-  {digitalWrite(RELAY_PIN_8, HIGH);
-  my_str = "";}
+    nexLoop(nex_listen_list);
 }
